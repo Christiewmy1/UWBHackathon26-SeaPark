@@ -1,2 +1,2 @@
-# UWBHackathon26-HuskyPark
+# UWBHackathon26-SeaPark
 A crowdsourced parking app for Seattle using Open Data to track availability, cleanliness, and trust-based user reports.
