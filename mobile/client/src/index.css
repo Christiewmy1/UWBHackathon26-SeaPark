@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SeaPark Design System
+   SeaPark Teal (#00C5BF) Primary, SeaPark Navy (#154876) Secondary, Dark base
+   All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Dark navy base */
+    --background: 215 60% 8%;
+    --foreground: 178 20% 96%;
+
+    --card: 215 50% 12%;
+    --card-foreground: 178 20% 96%;
+
+    --popover: 215 55% 10%;
+    --popover-foreground: 178 20% 96%;
+
+    /* SeaPark Teal — #00C5BF */
+    --primary: 178 100% 39%;
+    --primary-foreground: 215 60% 8%;
+    --primary-glow: 178 100% 55%;
+
+    /* SeaPark Navy — #154876 */
+    --secondary: 209 70% 27%;
+    --secondary-foreground: 178 20% 96%;
+
+    --muted: 215 35% 18%;
+    --muted-foreground: 210 15% 65%;
+
+    --accent: 178 80% 45%;
+    --accent-foreground: 215 60% 8%;
+
+    --destructive: 0 80% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Heat map status colors */
+    --status-open: 156 72% 45%;
+    --status-busy: 38 95% 55%;
+    --status-full: 358 78% 58%;
+
+    --border: 215 35% 20%;
+    --input: 215 40% 16%;
+    --ring: 178 100% 39%;
+
+    --radius: 1.25rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(178 100% 39%), hsl(209 70% 45%));
+    --gradient-surface: linear-gradient(180deg, hsl(215 55% 11%), hsl(215 60% 8%));
+    --gradient-glow: radial-gradient(circle at 30% 0%, hsl(178 100% 39% / 0.25), transparent 60%);
+    --gradient-heat: linear-gradient(90deg, hsl(156 72% 45%), hsl(38 95% 55%), hsl(358 78% 58%));
+
+    /* Shadows */
+    --shadow-elevated: 0 20px 60px -20px hsl(178 100% 25% / 0.4);
+    --shadow-card: 0 8px 32px -8px hsl(215 80% 4% / 0.6);
+    --shadow-glow: 0 0 40px hsl(178 100% 55% / 0.35);
+
+    /* Motion */
+    --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+    --sidebar-background: 215 55% 10%;
+    --sidebar-foreground: 178 20% 96%;
+    --sidebar-primary: 178 100% 39%;
+    --sidebar-primary-foreground: 215 60% 8%;
+    --sidebar-accent: 215 40% 16%;
+    --sidebar-accent-foreground: 178 20% 96%;
+    --sidebar-border: 215 35% 20%;
+    --sidebar-ring: 178 100% 39%;
+  }
+
+  /* Light mode — marine theme, dark-first */
+  .light {
+    --background: 178 30% 96%;
+    --foreground: 215 60% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 60% 12%;
+    --primary: 178 100% 33%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 178 20% 90%;
+    --muted-foreground: 215 25% 35%;
+    --border: 178 20% 86%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body, #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-primary { background-image: var(--gradient-primary); }
+  .bg-gradient-surface { background-image: var(--gradient-surface); }
+  .bg-gradient-glow { background-image: var(--gradient-glow); }
+  .bg-gradient-heat { background-image: var(--gradient-heat); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .ease-soft { transition-timing-function: var(--ease-out-soft); }
+
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@layer components {
+  .glass {
+    @apply bg-card/70 backdrop-blur-xl border border-white/5;
+  }
+}
