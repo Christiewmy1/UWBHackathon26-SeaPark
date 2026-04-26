@@ -1,7 +1,7 @@
 import React, { memo, useState } from "react";
 import {
   View, TouchableOpacity, Text, StyleSheet,
-  ActivityIndicator, ScrollView, StatusBar, Dimensions,
+  ActivityIndicator, ScrollView, StatusBar, Dimensions, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MapView, { Marker } from "react-native-maps";
@@ -26,11 +26,44 @@ const PriceMarker = memo(({ lot }: { lot: any }) => {
   const ratingText = pct != null ? `${pct}%` : "—";
 
   return (
-    <View style={[mk.bubble, { borderColor: ringColor }]}>
+    <View collapsable={false} style={[mk.bubble, { borderColor: ringColor }]}>
       <View style={[mk.dot, { backgroundColor: ringColor }]} />
       <Text style={mk.price} numberOfLines={1}>{priceText}</Text>
       <Text style={[mk.rating, { color: ringColor }]}>{ratingText}</Text>
     </View>
+  );
+});
+
+const LotMarker = memo(({ lot, onSelect }: { lot: any; onSelect: (lot: any) => void }) => {
+  const pct = lot.totalStalls > 0
+    ? Math.round((lot.estimatedAvailable / lot.totalStalls) * 100)
+    : null;
+  const pinColor = lot.isEventSurge ? "#DC2626"
+    : lot.category === "free" || lot.meterFreeToday ? COLORS.availability.high
+    : pct == null ? COLORS.text.secondary
+    : pct > 40 ? COLORS.availability.high
+    : pct > 10 ? COLORS.availability.limited
+    : COLORS.availability.full;
+
+  return (
+    <Marker
+      coordinate={{ latitude: lot.lat, longitude: lot.lng }}
+      title={lot.name}
+      description={
+        lot.isEventSurge
+          ? `Event surge — ${lot.estimatedAvailable} spots left`
+          : lot.meterFreeToday
+          ? "Free today!"
+          : lot.pricePerHour
+          ? `$${lot.pricePerHour}/hr · ${lot.estimatedAvailable} open`
+          : `Free · ${lot.estimatedAvailable} open`
+      }
+      onCalloutPress={() => onSelect(lot)}
+      tracksViewChanges={false}
+      pinColor={Platform.OS === "android" ? pinColor : undefined}
+    >
+      {Platform.OS === "ios" && <PriceMarker lot={lot} />}
+    </Marker>
   );
 });
 
@@ -120,24 +153,7 @@ export default function MapScreen({ lots, sortedByAvailability, loading, error, 
         {sortMode === "map" ? (
           <MapView style={StyleSheet.absoluteFillObject} initialRegion={MAP_CONFIG.defaultRegion}>
             {lots.map((lot: any) => (
-              <Marker
-                key={lot.lotId}
-                coordinate={{ latitude: lot.lat, longitude: lot.lng }}
-                title={lot.name}
-                description={
-                  lot.isEventSurge
-                    ? `Event surge — ${lot.estimatedAvailable} spots left`
-                    : lot.meterFreeToday
-                    ? "Free today!"
-                    : lot.pricePerHour
-                    ? `$${lot.pricePerHour}/hr · ${lot.estimatedAvailable} open`
-                    : `Free · ${lot.estimatedAvailable} open`
-                }
-                onCalloutPress={() => onSelectLot(lot)}
-                tracksViewChanges={false}
-              >
-                <PriceMarker lot={lot} />
-              </Marker>
+              <LotMarker key={lot.lotId} lot={lot} onSelect={onSelectLot} />
             ))}
           </MapView>
         ) : (
