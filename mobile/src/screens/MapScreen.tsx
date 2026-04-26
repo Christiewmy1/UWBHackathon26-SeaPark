@@ -1,50 +1,66 @@
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
 import MapView, { Marker } from "react-native-maps";
-import { getParkingLots } from "../services/api";
+import { subscribeToParkingLots } from "../services/firebase";
+import { MAP_CONFIG, COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from "../constants";
+import type { ParkingLot } from "../types";
 
-export default function MapScreen() {
-  const [lots, setLots] = useState<any[]>([]);
+type Props = {
+  onSelectLot: (lotId: string) => void;
+  onOpenAI: () => void;
+};
+
+export default function MapScreen({ onSelectLot, onOpenAI }: Props) {
+  const [lots, setLots] = useState<ParkingLot[]>([]);
 
   useEffect(() => {
-    load();
+    const unsubscribe = subscribeToParkingLots((data) => {
+      setLots(data);
+    });
+    return unsubscribe;
   }, []);
 
-  const load = async () => {
-    const data = await getParkingLots();
-    setLots(data);
+  const getMarkerColor = (availability: string) => {
+    if (availability === "high") return "green";
+    if (availability === "limited") return "orange";
+    return "red";
   };
 
   return (
     <View style={{ flex: 1 }}>
-      <MapView
-        style={{ flex: 1 }}
-        initialRegion={{
-          latitude: 47.6062,
-          longitude: -122.3321,
-          latitudeDelta: 0.09,
-          longitudeDelta: 0.09,
-        }}
-      >
+      <MapView style={{ flex: 1 }} initialRegion={MAP_CONFIG.defaultRegion}>
         {lots.map((lot) => (
           <Marker
             key={lot.id}
-            coordinate={{
-              latitude: lot.lat,
-              longitude: lot.lng,
-            }}
-            pinColor={
-              lot.availability > 0.7
-                ? "green"
-                : lot.availability > 0.3
-                ? "orange"
-                : "red"
-            }
+            coordinate={{ latitude: lot.latitude, longitude: lot.longitude }}
+            pinColor={getMarkerColor(lot.availability)}
             title={lot.name}
-            description={`Confidence: ${lot.confidence}`}
+            description={lot.isFree ? "Free" : `$${lot.pricePerHour}/hr`}
+            onCalloutPress={() => onSelectLot(lot.id)}
           />
         ))}
       </MapView>
+
+      <TouchableOpacity style={styles.aiButton} onPress={onOpenAI}>
+        <Text style={styles.aiButtonText}>Ask Husky AI</Text>
+      </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  aiButton: {
+    position: "absolute",
+    bottom: 32,
+    alignSelf: "center",
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING["2xl"],
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  aiButtonText: {
+    color: COLORS.text.inverse,
+    fontSize: TYPOGRAPHY.fontSize.md,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+  },
+});
