@@ -5,35 +5,35 @@
 @tailwind utilities;
 
 /* SeaPark Design System
-   Emerald Green (Primary), Space Needle Silver (Accents), Deep Puget Blue (Background)
+   SeaPark Teal (#00C5BF) Primary, SeaPark Navy (#154876) Secondary, Dark base
    All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* Deep Puget Blue base */
+    /* Dark navy base */
     --background: 215 60% 8%;
-    --foreground: 200 20% 96%;
+    --foreground: 178 20% 96%;
 
     --card: 215 50% 12%;
-    --card-foreground: 200 20% 96%;
+    --card-foreground: 178 20% 96%;
 
     --popover: 215 55% 10%;
-    --popover-foreground: 200 20% 96%;
+    --popover-foreground: 178 20% 96%;
 
-    /* Emerald Green primary */
-    --primary: 156 72% 45%;
+    /* SeaPark Teal — #00C5BF */
+    --primary: 178 100% 39%;
     --primary-foreground: 215 60% 8%;
-    --primary-glow: 156 85% 60%;
+    --primary-glow: 178 100% 55%;
 
-    /* Space Needle Silver */
-    --secondary: 210 15% 75%;
-    --secondary-foreground: 215 60% 8%;
+    /* SeaPark Navy — #154876 */
+    --secondary: 209 70% 27%;
+    --secondary-foreground: 178 20% 96%;
 
     --muted: 215 35% 18%;
     --muted-foreground: 210 15% 65%;
 
-    --accent: 195 80% 55%;
+    --accent: 178 80% 45%;
     --accent-foreground: 215 60% 8%;
 
     --destructive: 0 80% 58%;
@@ -46,45 +46,45 @@
 
     --border: 215 35% 20%;
     --input: 215 40% 16%;
-    --ring: 156 72% 45%;
+    --ring: 178 100% 39%;
 
     --radius: 1.25rem;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(156 72% 45%), hsl(170 80% 50%));
+    --gradient-primary: linear-gradient(135deg, hsl(178 100% 39%), hsl(209 70% 45%));
     --gradient-surface: linear-gradient(180deg, hsl(215 55% 11%), hsl(215 60% 8%));
-    --gradient-glow: radial-gradient(circle at 30% 0%, hsl(156 80% 50% / 0.25), transparent 60%);
+    --gradient-glow: radial-gradient(circle at 30% 0%, hsl(178 100% 39% / 0.25), transparent 60%);
     --gradient-heat: linear-gradient(90deg, hsl(156 72% 45%), hsl(38 95% 55%), hsl(358 78% 58%));
 
     /* Shadows */
-    --shadow-elevated: 0 20px 60px -20px hsl(156 80% 30% / 0.4);
+    --shadow-elevated: 0 20px 60px -20px hsl(178 100% 25% / 0.4);
     --shadow-card: 0 8px 32px -8px hsl(215 80% 4% / 0.6);
-    --shadow-glow: 0 0 40px hsl(156 85% 60% / 0.35);
+    --shadow-glow: 0 0 40px hsl(178 100% 55% / 0.35);
 
     /* Motion */
     --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 
     --sidebar-background: 215 55% 10%;
-    --sidebar-foreground: 200 20% 96%;
-    --sidebar-primary: 156 72% 45%;
+    --sidebar-foreground: 178 20% 96%;
+    --sidebar-primary: 178 100% 39%;
     --sidebar-primary-foreground: 215 60% 8%;
     --sidebar-accent: 215 40% 16%;
-    --sidebar-accent-foreground: 200 20% 96%;
+    --sidebar-accent-foreground: 178 20% 96%;
     --sidebar-border: 215 35% 20%;
-    --sidebar-ring: 156 72% 45%;
+    --sidebar-ring: 178 100% 39%;
   }
 
-  /* Light mode kept identical-feel for the marine theme; we operate dark-first */
+  /* Light mode — marine theme, dark-first */
   .light {
-    --background: 200 30% 96%;
+    --background: 178 30% 96%;
     --foreground: 215 60% 12%;
     --card: 0 0% 100%;
     --card-foreground: 215 60% 12%;
-    --primary: 156 72% 38%;
+    --primary: 178 100% 33%;
     --primary-foreground: 0 0% 100%;
-    --muted: 200 20% 90%;
+    --muted: 178 20% 90%;
     --muted-foreground: 215 25% 35%;
-    --border: 200 20% 86%;
+    --border: 178 20% 86%;
   }
 }
 

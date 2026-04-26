@@ -96,7 +96,15 @@ export function useAvailability() {
 
   useEffect(() => {
     refresh();
+    const interval = setInterval(refresh, 5 * 60 * 1000); // re-fetch every 5 min
+    return () => clearInterval(interval);
   }, [refresh]);
 
-  return { lots, loading, error, source, refresh, submitReport };
+  const sortedByAvailability = [...lots].sort((a, b) => {
+    const pctA = a.totalStalls > 0 ? a.estimatedAvailable / a.totalStalls : 0;
+    const pctB = b.totalStalls > 0 ? b.estimatedAvailable / b.totalStalls : 0;
+    return pctB - pctA;
+  });
+
+  return { lots, sortedByAvailability, loading, error, source, refresh, submitReport };
 }

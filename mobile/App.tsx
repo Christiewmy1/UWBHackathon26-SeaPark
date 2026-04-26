@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import MapScreen from "./src/screens/MapScreen";
 import SpotDetailsScreen from "./src/screens/SpotDetailsScreen";
 import AIConciergeScreen from "./src/screens/AIConciergeScreen";
@@ -11,7 +12,7 @@ type ActiveScreen =
 
 export default function App() {
   const [screen, setScreen] = useState<ActiveScreen>({ name: "Map" });
-  const { lots, loading, error, refresh, submitReport } = useAvailability();
+  const { lots, sortedByAvailability, loading, error, refresh, submitReport } = useAvailability();
 
   if (screen.name === "SpotDetails") {
     const lot = lots.find((l: any) => l.lotId === screen.lotId) ?? null;
@@ -35,13 +36,16 @@ export default function App() {
   }
 
   return (
-    <MapScreen
-      lots={lots}
-      loading={loading}
-      error={error}
-      refresh={refresh}
-      onSelectLot={(lot) => setScreen({ name: "SpotDetails", lotId: lot.lotId })}
-      onOpenAI={() => setScreen({ name: "AIConcierge" })}
-    />
+    <SafeAreaProvider>
+      <MapScreen
+        lots={lots}
+        sortedByAvailability={sortedByAvailability}
+        loading={loading}
+        error={error}
+        refresh={refresh}
+        onSelectLot={(lot) => setScreen({ name: "SpotDetails", lotId: lot.lotId })}
+        onOpenAI={() => setScreen({ name: "AIConcierge" })}
+      />
+    </SafeAreaProvider>
   );
 }

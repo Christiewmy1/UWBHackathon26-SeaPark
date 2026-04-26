@@ -89,6 +89,43 @@ async def startup():
 # Helpers
 # ============================================================================
 
+import math
+
+def _haversine_km(lat1, lng1, lat2, lng2) -> float:
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng/2)**2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+def _get_todays_events() -> list:
+    today = date.today()
+    m, dow = today.month, today.weekday()  # 0=Mon 6=Sun
+    events = []
+    # Mariners home season Apr–Sep, heavier on Fri/Sat/Sun
+    if 4 <= m <= 9 and dow in (4, 5, 6):
+        events.append({"name": "Mariners game", "venue": "T-Mobile Park",
+                        "lat": 47.5914, "lng": -122.3325, "radius_km": 1.2,
+                        "tip": "T-Mobile lots fill 90 min before first pitch. Book ahead or take Link."})
+    # Seahawks Aug–Jan, Sounders Mar–Oct — both at Lumen Field, Sat/Sun
+    if dow in (5, 6):
+        if 8 <= m or m <= 1:
+            events.append({"name": "Seahawks game", "venue": "Lumen Field",
+                            "lat": 47.5952, "lng": -122.3316, "radius_km": 1.2,
+                            "tip": "Lumen Field Garage fills fast. Arrive 1+ hour early or take Link Light Rail."})
+        if 3 <= m <= 10:
+            events.append({"name": "Sounders match", "venue": "Lumen Field",
+                            "lat": 47.5952, "lng": -122.3316, "radius_km": 1.2,
+                            "tip": "Lumen lots surge on match days. SoDo surface lots are cheaper."})
+    # Kraken Oct–Apr, Thu–Sun at Climate Pledge Arena
+    if (m >= 10 or m <= 4) and dow in (3, 4, 5, 6):
+        events.append({"name": "Kraken game", "venue": "Climate Pledge Arena",
+                        "lat": 47.6221, "lng": -122.3540, "radius_km": 0.9,
+                        "tip": "Seattle Center Garage is closest. Link Light Rail to Seattle Center is easiest."})
+    return events
+
+
 def _is_meter_free_today() -> bool:
     d = date.today()
     if d.weekday() == 6:  # Sunday
@@ -147,6 +184,31 @@ def _make_lot(
 # Lot definitions  (sdot_area maps to 7jzm-ucez study_area values)
 # ============================================================================
 
+def _apply_event_surge(lots: list) -> list:
+    events = _get_todays_events()
+    if not events:
+        return lots
+    result = []
+    for lot in lots:
+        surge_event = None
+        for ev in events:
+            if _haversine_km(lot["lat"], lot["lng"], ev["lat"], ev["lng"]) <= ev["radius_km"]:
+                surge_event = ev
+                break
+        if surge_event:
+            lot = {**lot,
+                   "timePattern": "busy",
+                   "isEventSurge": True,
+                   "eventName": surge_event["name"],
+                   "eventTip": surge_event["tip"],
+                   "freshnessLabel": f"Event surge — {surge_event['name']}",
+                   "estimatedAvailable": max(0, int(lot["estimatedAvailable"] * 0.4))}
+        else:
+            lot = {**lot, "isEventSurge": False}
+        result.append(lot)
+    return result
+
+
 def _build_lots():
     return [
         # --- Downtown / Pike Place ---
@@ -204,6 +266,55 @@ def _build_lots():
         # --- Fremont ---
         _make_lot("fremont-36th", "N 36th St Fremont Street Zone", 47.6503, -122.3502, "metered", 1.50, 30, 0.40, "moderate", "N 36th St & Fremont Ave N", "Fremont"),
         _make_lot("fremont-aurora-lot", "Aurora Ave N Lot", 47.6520, -122.3471, "lot", 1.00, 80, 0.30, "quiet", "Aurora Ave N & N 38th St", "Fremont"),
+
+        # --- Ballard ---
+        _make_lot("ballard-market-garage", "Ballard Market Garage", 47.6685, -122.3842, "garage", 2.00, 300, 0.55, "moderate", "5409 Ballard Ave NW", "Ballard"),
+        _make_lot("ballard-ave-metered", "Ballard Ave NW Metered Zone", 47.6677, -122.3830, "metered", 1.50, 40, 0.65, "busy", "Ballard Ave NW & 22nd Ave NW", "Ballard"),
+        _make_lot("ballard-locks-lot", "Ballard Locks Visitor Lot", 47.6654, -122.3965, "lot", 0.0, 120, 0.45, "moderate", "3015 NW 54th St", "Ballard Locks"),
+        _make_lot("ballard-17th-metered", "17th Ave NW Metered Zone", 47.6692, -122.3869, "metered", 1.50, 22, 0.35, "quiet", "17th Ave NW & NW Market St", "Ballard"),
+
+        # --- Chinatown / International District ---
+        _make_lot("cid-garage", "Chinatown/ID Parking Garage", 47.5989, -122.3240, "garage", 2.50, 400, 0.60, "busy", "500 5th Ave S", "Chinatown/ID"),
+        _make_lot("cid-5th-metered", "5th Ave S Metered Zone", 47.5980, -122.3248, "metered", 2.00, 30, 0.65, "busy", "5th Ave S & S King St", "Chinatown/ID"),
+        _make_lot("cid-uwmc-south", "UW Medicine South Lake Union Lot", 47.6001, -122.3213, "lot", 2.00, 150, 0.50, "moderate", "401 Broadway", "Chinatown/ID"),
+
+        # --- Roosevelt / Northgate ---
+        _make_lot("roosevelt-11th-metered", "11th Ave NE Roosevelt Metered Zone", 47.6702, -122.3178, "metered", 1.50, 25, 0.40, "moderate", "11th Ave NE & NE 65th St", "Roosevelt"),
+        _make_lot("northgate-mall-garage", "Northgate Station Garage", 47.7065, -122.3255, "garage", 0.0, 1000, 0.50, "moderate", "300 NE Northgate Way", ""),
+        _make_lot("roosevelt-garage", "Roosevelt Square Garage", 47.6710, -122.3190, "garage", 1.50, 180, 0.35, "quiet", "NE 65th St & 12th Ave NE", "Roosevelt"),
+
+        # --- Green Lake ---
+        _make_lot("greenlake-east-lot", "Green Lake East Parking Lot", 47.6803, -122.3288, "lot", 0.0, 120, 0.55, "moderate", "7312 East Green Lake Dr N", "Greenlake"),
+        _make_lot("greenlake-west-lot", "Green Lake West Parking Lot", 47.6803, -122.3399, "lot", 0.0, 200, 0.60, "busy", "W Green Lake Dr N & Stroud Ave N", "Greenlake"),
+        _make_lot("greenlake-aurora-metered", "Aurora Ave N & 72nd Metered Zone", 47.6840, -122.3425, "metered", 1.50, 18, 0.25, "quiet", "Aurora Ave N & N 72nd St", "Greenlake"),
+
+        # --- Columbia City ---
+        _make_lot("columbia-city-rainier", "Rainier Ave S Columbia City Lot", 47.5593, -122.2924, "lot", 0.0, 80, 0.40, "moderate", "4861 Rainier Ave S", "Columbia City"),
+        _make_lot("columbia-city-metered", "Columbia City Metered Zone", 47.5596, -122.2912, "metered", 1.50, 20, 0.45, "moderate", "Rainier Ave S & S Alaska St", "Columbia City"),
+
+        # --- 12th Ave / Central District ---
+        _make_lot("12th-ave-garage", "12th Ave Garage", 47.6136, -122.3125, "garage", 2.00, 200, 0.45, "moderate", "1700 12th Ave", "12th Ave"),
+        _make_lot("12th-ave-metered", "12th Ave Metered Zone", 47.6143, -122.3130, "metered", 2.00, 22, 0.50, "moderate", "12th Ave & E Spring St", "12th Ave"),
+
+        # --- Cherry Hill ---
+        _make_lot("cherry-hill-garage", "Cherry Hill Medical Garage", 47.6067, -122.3155, "garage", 3.00, 350, 0.70, "busy", "500 17th Ave", "Cherry Hill"),
+        _make_lot("cherry-hill-metered", "17th Ave Cherry Hill Metered Zone", 47.6078, -122.3148, "metered", 2.00, 18, 0.55, "moderate", "17th Ave & E Cherry St", "Cherry Hill"),
+
+        # --- Wallingford ---
+        _make_lot("wallingford-45th-metered", "N 45th St Wallingford Metered Zone", 47.6613, -122.3358, "metered", 1.50, 30, 0.50, "moderate", "N 45th St & Wallingford Ave N", ""),
+        _make_lot("wallingford-lot", "Wallingford Center Lot", 47.6608, -122.3371, "lot", 0.0, 60, 0.35, "quiet", "1815 N 45th St", ""),
+
+        # --- Queen Anne ---
+        _make_lot("queen-anne-1st-metered", "Queen Anne Ave N Metered Zone", 47.6354, -122.3572, "metered", 1.50, 28, 0.45, "moderate", "Queen Anne Ave N & W McGraw St", ""),
+        _make_lot("queen-anne-garage", "Queen Anne Thriftway Garage", 47.6359, -122.3577, "garage", 0.0, 80, 0.40, "moderate", "1908 Queen Anne Ave N", ""),
+
+        # --- West Seattle ---
+        _make_lot("west-seattle-junction-lot", "West Seattle Junction Lot", 47.5607, -122.3862, "lot", 0.0, 150, 0.50, "moderate", "4700 California Ave SW", ""),
+        _make_lot("west-seattle-metered", "California Ave SW Metered Zone", 47.5613, -122.3867, "metered", 1.50, 25, 0.45, "moderate", "California Ave SW & SW Alaska St", ""),
+
+        # --- Georgetown ---
+        _make_lot("georgetown-airport-lot", "Georgetown Industrial Lot", 47.5476, -122.3194, "lot", 1.00, 200, 0.20, "quiet", "Airport Way S & S Director St", ""),
+        _make_lot("georgetown-metered", "Airport Way S Metered Zone", 47.5487, -122.3205, "metered", 1.00, 20, 0.15, "quiet", "Airport Way S & S Lucile St", ""),
     ]
 
 
@@ -329,7 +440,7 @@ async def health():
 
 @app.get("/api/v1/parking/lots")
 async def get_parking_lots(free_only: bool = False, limit: int = 200):
-    lots = _build_lots()
+    lots = _apply_event_surge(_build_lots())
     if free_only:
         lots = [l for l in lots if l["category"] == "free"]
     return lots[:limit]
@@ -414,7 +525,12 @@ async def get_rpz(latitude: float, longitude: float):
 
 @app.get("/api/v1/seattle/events")
 async def get_events():
-    return {"events": [], "suggestions": []}
+    events = _get_todays_events()
+    return {
+        "events": events,
+        "hasEvents": len(events) > 0,
+        "suggestions": [ev["tip"] for ev in events],
+    }
 
 
 if __name__ == "__main__":

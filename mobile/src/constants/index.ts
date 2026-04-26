@@ -16,24 +16,24 @@
 // ============================================================================
 
 export const COLORS = {
-  // Primary Colors
-  primary: '#10B981',        // Emerald Green - Main brand color
-  primaryLight: '#34D399',   // Light emerald for hover states
-  primaryDark: '#059669',   // Dark emerald for pressed states
-  
-  // Secondary Colors
-  secondary: '#9CA3AF',     // Space Needle Silver - Secondary elements
-  secondaryLight: '#D1D5DB',
-  secondaryDark: '#6B7280',
-  
+  // Primary Colors — teal from SeaPark logo
+  primary: '#00C5BF',        // SeaPark Teal - Main brand color
+  primaryLight: '#33D4CF',   // Light teal for hover states
+  primaryDark: '#009A95',    // Dark teal for pressed states
+
+  // Secondary Colors — navy from logo waves
+  secondary: '#154876',      // SeaPark Navy - Secondary elements
+  secondaryLight: '#1E6AA8',
+  secondaryDark: '#0D2E4A',
+
   // Background Colors
-  background: '#1E3A5F',     // Deep Puget Blue - Main background
+  background: '#154876',     // Deep Navy - Main background (logo navy)
   backgroundLight: '#F9FAFB',
-  backgroundDark: '#111827',
-  
+  backgroundDark: '#000000',
+
   // Availability Colors
   availability: {
-    high: '#10B981',        // Green - High availability
+    high: '#10B981',        // Green - High availability (kept for clarity)
     limited: '#F59E0B',     // Amber/Yellow - Limited availability
     full: '#EF4444',       // Red - Full/Congested
   },
@@ -200,7 +200,7 @@ export const MAP_CONFIG = {
     radius: 30,
     opacity: 0.7,
     gradient: {
-      colors: ['#10B981', '#F59E0B', '#EF4444'],
+      colors: ['#00C5BF', '#F59E0B', '#EF4444'],
       startPoints: [0, 0.5, 1],
     },
   },
