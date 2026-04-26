@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { initializeFirebase } from "./src/services/firebase";
+import React, { useState } from "react";
 import MapScreen from "./src/screens/MapScreen";
 import SpotDetailsScreen from "./src/screens/SpotDetailsScreen";
 import AIConciergeScreen from "./src/screens/AIConciergeScreen";
+import { useAvailability } from "./src/hooks/useAvailability";
 
 type ActiveScreen =
   | { name: "Map" }
@@ -10,34 +10,38 @@ type ActiveScreen =
   | { name: "AIConcierge" };
 
 export default function App() {
-  const [activeScreen, setActiveScreen] = useState<ActiveScreen>({ name: "Map" });
+  const [screen, setScreen] = useState<ActiveScreen>({ name: "Map" });
+  const { lots, loading, error, refresh, submitReport } = useAvailability();
 
-  useEffect(() => {
-    initializeFirebase();
-  }, []);
-
-  if (activeScreen.name === "SpotDetails") {
+  if (screen.name === "SpotDetails") {
+    const lot = lots.find((l: any) => l.lotId === screen.lotId) ?? null;
+    if (!lot) return null;
     return (
       <SpotDetailsScreen
-        lotId={activeScreen.lotId}
-        onBack={() => setActiveScreen({ name: "Map" })}
+        lot={lot}
+        onBack={() => setScreen({ name: "Map" })}
+        onReport={(lotId, type) => submitReport(lotId, type)}
       />
     );
   }
 
-  if (activeScreen.name === "AIConcierge") {
+  if (screen.name === "AIConcierge") {
     return (
       <AIConciergeScreen
-        onBack={() => setActiveScreen({ name: "Map" })}
-        onSelectLot={(lotId) => setActiveScreen({ name: "SpotDetails", lotId })}
+        onBack={() => setScreen({ name: "Map" })}
+        onSelectLot={(lot) => setScreen({ name: "SpotDetails", lotId: lot.lotId })}
       />
     );
   }
 
   return (
     <MapScreen
-      onSelectLot={(lotId) => setActiveScreen({ name: "SpotDetails", lotId })}
-      onOpenAI={() => setActiveScreen({ name: "AIConcierge" })}
+      lots={lots}
+      loading={loading}
+      error={error}
+      refresh={refresh}
+      onSelectLot={(lot) => setScreen({ name: "SpotDetails", lotId: lot.lotId })}
+      onOpenAI={() => setScreen({ name: "AIConcierge" })}
     />
   );
 }

@@ -216,9 +216,29 @@ export const MAP_CONFIG = {
 // API Configuration
 // ============================================================================
 
+// Detect the backend URL automatically from Expo's dev-server host.
+// Expo Go already knows the machine's LAN IP — we just swap the port.
+function _detectBackendUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Constants = require('expo-constants').default;
+    const hostUri: string =
+      Constants?.expoConfig?.hostUri ??
+      Constants?.manifest2?.extra?.expoClient?.hostUri ??
+      Constants?.manifest?.debuggerHost ?? '';
+    const host = hostUri.split(':')[0];
+    if (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '') {
+      return `http://${host}:8000`;
+    }
+  } catch {
+    // expo-constants unavailable
+  }
+  return 'http://localhost:8000';
+}
+
 export const API_CONFIG = {
-  // Backend URL
-  baseUrl: 'http://localhost:8000',
+  baseUrl: _detectBackendUrl(),
   
   // API Version
   version: 'v1',

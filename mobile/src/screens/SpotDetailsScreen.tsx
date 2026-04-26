@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,184 +10,224 @@ import {
   Linking,
 } from "react-native";
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, TYPOGRAPHY } from "../constants";
-import type { ParkingLot, ParkingReport, ParkingRating } from "../types";
-import {
-  getParkingLot,
-  getLotRatings,
-  subscribeToLotReports,
-  submitReport,
-} from "../services/firebase";
 
 type Props = {
-  lotId: string;
+  lot: any;
   onBack: () => void;
+  onReport: (lotId: string, type: "available" | "full") => void;
 };
 
-export default function SpotDetailsScreen({ lotId, onBack }: Props) {
-  const [lot, setLot] = useState<ParkingLot | null>(null);
-  const [ratings, setRatings] = useState<ParkingRating[]>([]);
-  const [recentReports, setRecentReports] = useState<ParkingReport[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function SpotDetailsScreen({ lot, onBack, onReport }: Props) {
+  const [myReport, setMyReport] = useState<"available" | "full" | null>(null);
 
-  useEffect(() => {
-    let unsubscribeReports: (() => void) | null = null;
+  const availabilityPct =
+    lot.totalStalls > 0
+      ? Math.round((lot.estimatedAvailable / lot.totalStalls) * 100)
+      : null;
 
-    const loadData = async () => {
-      try {
-        const [lotData, ratingsData] = await Promise.all([
-          getParkingLot(lotId),
-          getLotRatings(lotId),
-        ]);
+  const availabilityColor =
+    availabilityPct == null
+      ? COLORS.text.secondary
+      : availabilityPct > 40
+      ? COLORS.availability.high
+      : availabilityPct > 10
+      ? COLORS.availability.limited
+      : COLORS.availability.full;
 
-        if (lotData) setLot(lotData);
-        setRatings(ratingsData);
+  const confidencePct = Math.round((lot.confidence ?? 0.65) * 100);
+  const reportCount = lot.reportCount ?? 0;
 
-        unsubscribeReports = subscribeToLotReports(lotId, (reports) => {
-          setRecentReports(reports);
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const confidenceLabel =
+    confidencePct >= 85 ? "High" : confidencePct >= 65 ? "Medium" : "Low";
+  const confidenceColor =
+    confidencePct >= 85
+      ? COLORS.availability.high
+      : confidencePct >= 65
+      ? COLORS.availability.limited
+      : COLORS.availability.full;
 
-    loadData();
-
-    return () => {
-      if (unsubscribeReports) unsubscribeReports();
-    };
-  }, [lotId]);
-
-  const handleReport = async (reportType: "parked" | "leaving" | "full") => {
-    if (!lot) return;
-    await submitReport(lot.id, "anonymous", reportType, lot.latitude, lot.longitude);
+  const handleReport = (type: "available" | "full") => {
+    if (myReport) return;
+    setMyReport(type);
+    onReport(lot.lotId, type);
   };
 
   const handleNavigate = () => {
-    if (!lot) return;
     const url =
       Platform.OS === "ios"
-        ? `maps:?daddr=${lot.latitude},${lot.longitude}`
-        : `geo:${lot.latitude},${lot.longitude}?q=${lot.latitude},${lot.longitude}`;
+        ? `maps:?daddr=${lot.lat},${lot.lng}`
+        : `geo:${lot.lat},${lot.lng}?q=${lot.lat},${lot.lng}`;
     Linking.openURL(url);
   };
 
-  if (loading || !lot) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const categoryLabel: Record<string, string> = {
+    free: "Free Lot",
+    metered: "Metered Street",
+    garage: "Covered Garage",
+    lot: "Surface Lot",
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>← Back</Text>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{lot.name}</Text>
-        </View>
-
-        {/* Price Card */}
-        <View style={styles.priceCard}>
-          <Text style={styles.priceLabel}>Price</Text>
-          <Text style={[styles.priceValue, lot.isFree && styles.freePrice]}>
-            {lot.isFree ? "$0.00 (Free)" : `$${lot.pricePerHour ?? 0}/hr`}
+          <Text style={styles.title} numberOfLines={2}>
+            {lot.name}
           </Text>
-          {lot.timeLimit && (
-            <Text style={styles.timeLimit}>{lot.timeLimit}</Text>
-          )}
-        </View>
-
-        {/* Scores Card */}
-        <View style={styles.scoresCard}>
-          <Text style={styles.sectionTitle}>Scores</Text>
-          <View style={styles.scoreRow}>
-            <View style={styles.scoreItem}>
-              <Text style={styles.scoreLabel}>Safe-Score</Text>
-              <Text style={styles.scoreValue}>
-                {(lot.safeScore ?? 0).toFixed(1)}/10
-              </Text>
-            </View>
-            <View style={styles.scoreItem}>
-              <Text style={styles.scoreLabel}>Clean-Score</Text>
-              <Text style={styles.scoreValue}>
-                {(lot.cleanScore ?? 0).toFixed(1)}/10
-              </Text>
-            </View>
-            <View style={styles.scoreItem}>
-              <Text style={styles.scoreLabel}>Space-Score</Text>
-              <Text style={styles.scoreValue}>
-                {(lot.spaceScore ?? 0).toFixed(1)}/10
-              </Text>
-            </View>
+          <View style={styles.categoryChip}>
+            <Text style={styles.categoryText}>
+              {categoryLabel[lot.category] ?? lot.category}
+            </Text>
           </View>
         </View>
 
-        {/* Report Buttons */}
-        <View style={styles.reportCard}>
-          <Text style={styles.sectionTitle}>Report Status</Text>
-          <View style={styles.reportButtons}>
-            <TouchableOpacity
-              style={[styles.reportButton, styles.reportButtonGreen]}
-              onPress={() => handleReport("parked")}
-            >
-              <Text style={styles.reportButtonText}>Just Parked</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.reportButton, styles.reportButtonAmber]}
-              onPress={() => handleReport("leaving")}
-            >
-              <Text style={styles.reportButtonText}>Leaving Now</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.reportButton, styles.reportButtonRed]}
-              onPress={() => handleReport("full")}
-            >
-              <Text style={styles.reportButtonText}>Full</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Recent Feedback */}
-        <View style={styles.feedbackCard}>
-          <Text style={styles.sectionTitle}>Recent Feedback</Text>
-          {ratings.length === 0 ? (
-            <Text style={styles.noFeedback}>No feedback yet</Text>
+        {/* Price card */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Today's Rate</Text>
+          {lot.meterFreeToday ? (
+            <Text style={[styles.priceValue, { color: COLORS.availability.high }]}>FREE</Text>
+          ) : lot.pricePerHour ? (
+            <Text style={styles.priceValue}>${lot.pricePerHour.toFixed(2)}/hr</Text>
           ) : (
-            ratings.slice(0, 5).map((rating) => (
-              <View key={rating.id} style={styles.feedbackItem}>
-                {rating.comment ? (
-                  <Text style={styles.feedbackComment}>{rating.comment}</Text>
-                ) : null}
-                <View style={styles.feedbackScores}>
-                  <Text style={styles.feedbackScore}>
-                    Safe: {rating.safeScore} | Clean: {rating.cleanScore} | Space:{" "}
-                    {rating.spaceScore}
-                  </Text>
-                </View>
-              </View>
-            ))
+            <Text style={[styles.priceValue, { color: COLORS.availability.high }]}>FREE</Text>
+          )}
+          {lot.meterFreeToday && (
+            <Text style={styles.freeNote}>Metered parking is free today (Sunday/holiday)</Text>
           )}
         </View>
 
-        {/* Address */}
-        {lot.address && (
-          <View style={styles.addressCard}>
-            <Text style={styles.sectionTitle}>Address</Text>
-            <Text style={styles.addressText}>{lot.address}</Text>
+        {/* Availability card */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Availability</Text>
+          {availabilityPct != null ? (
+            <>
+              <Text style={[styles.availValue, { color: availabilityColor }]}>
+                ~{lot.estimatedAvailable} of {lot.totalStalls} open
+              </Text>
+              <View style={styles.barBackground}>
+                <View
+                  style={[
+                    styles.barFill,
+                    { width: `${availabilityPct}%` as any, backgroundColor: availabilityColor },
+                  ]}
+                />
+              </View>
+              <Text style={styles.freshnessLabel}>{lot.freshnessLabel}</Text>
+            </>
+          ) : (
+            <Text style={styles.availValue}>Unknown</Text>
+          )}
+        </View>
+
+        {/* Crowdsourced Confidence card */}
+        <View style={styles.card}>
+          <View style={styles.confidenceHeader}>
+            <Text style={styles.cardLabel}>Crowdsourced Confidence</Text>
+            <View style={[styles.confidenceBadge, { backgroundColor: confidenceColor + "22" }]}>
+              <Text style={[styles.confidenceBadgeText, { color: confidenceColor }]}>
+                {confidenceLabel}
+              </Text>
+            </View>
           </View>
-        )}
+          <Text style={styles.confidenceSubtitle}>
+            User input sharpens predictions when official data lags
+          </Text>
+
+          {/* Confidence bar */}
+          <View style={styles.barBackground}>
+            <View
+              style={[
+                styles.barFill,
+                { width: `${confidencePct}%` as any, backgroundColor: confidenceColor },
+              ]}
+            />
+          </View>
+          <Text style={[styles.confidencePct, { color: confidenceColor }]}>
+            {confidencePct}% confidence
+          </Text>
+
+          {reportCount > 0 && (
+            <Text style={styles.reportCount}>
+              Based on {reportCount} community report{reportCount === 1 ? "" : "s"} in the last hour
+            </Text>
+          )}
+
+          {/* Report buttons */}
+          {myReport ? (
+            <View style={styles.thankYou}>
+              <Text style={styles.thankYouText}>
+                {myReport === "available"
+                  ? "Thanks! Spot confirmed available."
+                  : "Thanks! Marked as full."}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.reportPrompt}>What did you find?</Text>
+              <View style={styles.reportButtons}>
+                <TouchableOpacity
+                  style={[styles.reportBtn, styles.reportBtnAvailable]}
+                  onPress={() => handleReport("available")}
+                >
+                  <Text style={styles.reportBtnIcon}>P</Text>
+                  <Text style={styles.reportBtnText}>Found a Spot</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.reportBtn, styles.reportBtnFull]}
+                  onPress={() => handleReport("full")}
+                >
+                  <Text style={styles.reportBtnIcon}>X</Text>
+                  <Text style={styles.reportBtnText}>It's Full</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* Stats row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statNumber, { color: confidenceColor }]}>
+              {confidencePct}%
+            </Text>
+            <Text style={styles.statLabel}>Confidence</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{lot.totalStalls || "?"}</Text>
+            <Text style={styles.statLabel}>Total Spaces</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>
+              {lot.timePattern === "quiet"
+                ? "Quiet"
+                : lot.timePattern === "busy"
+                ? "Busy"
+                : "Moderate"}
+            </Text>
+            <Text style={styles.statLabel}>Right Now</Text>
+          </View>
+        </View>
+
+        {/* Seattle parking rules */}
+        <View style={[styles.card, styles.infoCard]}>
+          <Text style={styles.infoTitle}>Seattle Parking Rules</Text>
+          <Text style={styles.infoText}>
+            Metered parking is FREE on Sundays and 8 Seattle holidays. Always check posted
+            signs for time limits and permit-zone restrictions.
+          </Text>
+        </View>
       </ScrollView>
 
-      {/* Navigate Button */}
+      {/* Navigate button */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.navigateButton} onPress={handleNavigate}>
-          <Text style={styles.navigateButtonText}>Navigate</Text>
+        <TouchableOpacity style={styles.navButton} onPress={handleNavigate}>
+          <Text style={styles.navButtonText}>Open in Maps</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -195,183 +235,191 @@ export default function SpotDetailsScreen({ lotId, onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.backgroundLight,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    color: COLORS.text.secondary,
-  },
+  container: { flex: 1, backgroundColor: COLORS.backgroundLight },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: SPACING["4xl"] },
   header: {
-    padding: SPACING.lg,
     backgroundColor: COLORS.primary,
+    padding: SPACING.lg,
+    paddingTop: SPACING["2xl"],
   },
-  backButton: {
-    marginBottom: SPACING.sm,
-  },
-  backButtonText: {
-    fontSize: TYPOGRAPHY.fontSize.md,
+  backButton: { marginBottom: SPACING.sm },
+  backText: { color: COLORS.text.inverse, fontSize: TYPOGRAPHY.fontSize.md },
+  title: {
     color: COLORS.text.inverse,
-  },
-  headerTitle: {
     fontSize: TYPOGRAPHY.fontSize.xl,
     fontWeight: TYPOGRAPHY.fontWeight.bold,
-    color: COLORS.text.inverse,
+    marginBottom: SPACING.sm,
   },
-  priceCard: {
+  categoryChip: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  categoryText: {
+    color: COLORS.text.inverse,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: TYPOGRAPHY.fontWeight.medium,
+  },
+  card: {
     margin: SPACING.lg,
+    marginBottom: 0,
     padding: SPACING.lg,
     backgroundColor: COLORS.ui.card,
     borderRadius: BORDER_RADIUS.lg,
     ...SHADOWS.md,
   },
-  priceLabel: {
+  cardLabel: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     color: COLORS.text.secondary,
     textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: SPACING.xs,
   },
   priceValue: {
     fontSize: TYPOGRAPHY.fontSize["3xl"],
     fontWeight: TYPOGRAPHY.fontWeight.bold,
     color: COLORS.text.primary,
+  },
+  freeNote: {
     marginTop: SPACING.xs,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: COLORS.availability.high,
   },
-  freePrice: {
-    color: COLORS.primary,
+  availValue: {
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
+    marginBottom: SPACING.sm,
   },
-  timeLimit: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    color: COLORS.text.secondary,
-    marginTop: SPACING.xs,
+  barBackground: {
+    height: 8,
+    backgroundColor: COLORS.ui.border,
+    borderRadius: BORDER_RADIUS.full,
+    overflow: "hidden",
+    marginBottom: SPACING.xs,
   },
-  scoresCard: {
-    margin: SPACING.lg,
-    marginTop: 0,
-    padding: SPACING.lg,
-    backgroundColor: COLORS.ui.card,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.md,
+  barFill: { height: "100%", borderRadius: BORDER_RADIUS.full },
+  freshnessLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.text.secondary },
+
+  // Confidence section
+  confidenceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: SPACING.xs,
   },
-  sectionTitle: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
+  confidenceBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  confidenceBadgeText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
-    color: COLORS.text.primary,
+  },
+  confidenceSubtitle: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: COLORS.text.light,
+    marginBottom: SPACING.md,
+    fontStyle: "italic",
+  },
+  confidencePct: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    marginBottom: SPACING.xs,
+  },
+  reportCount: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: COLORS.text.secondary,
     marginBottom: SPACING.md,
   },
-  scoreRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  scoreItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  scoreLabel: {
+  reportPrompt: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     color: COLORS.text.secondary,
-  },
-  scoreValue: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontWeight: TYPOGRAPHY.fontWeight.bold,
-    color: COLORS.primary,
-    marginTop: SPACING.xs,
-  },
-  reportCard: {
-    margin: SPACING.lg,
-    marginTop: 0,
-    padding: SPACING.lg,
-    backgroundColor: COLORS.ui.card,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   reportButtons: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: SPACING.sm,
   },
-  reportButton: {
+  reportBtn: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
-    marginHorizontal: SPACING.xs,
+    gap: SPACING.xs,
+  },
+  reportBtnAvailable: { backgroundColor: "#D1FAE5" },
+  reportBtnFull: { backgroundColor: "#FEE2E2" },
+  reportBtnIcon: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
+  },
+  reportBtnText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    color: COLORS.text.primary,
+  },
+  thankYou: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    backgroundColor: "#D1FAE5",
+    borderRadius: BORDER_RADIUS.md,
     alignItems: "center",
   },
-  reportButtonGreen: {
-    backgroundColor: COLORS.availability.high,
-  },
-  reportButtonAmber: {
-    backgroundColor: COLORS.availability.limited,
-  },
-  reportButtonRed: {
-    backgroundColor: COLORS.availability.full,
-  },
-  reportButtonText: {
-    color: COLORS.text.inverse,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+  thankYouText: {
     fontSize: TYPOGRAPHY.fontSize.sm,
+    color: "#065F46",
+    fontWeight: TYPOGRAPHY.fontWeight.medium,
   },
-  feedbackCard: {
+
+  statsRow: {
+    flexDirection: "row",
     margin: SPACING.lg,
-    marginTop: 0,
-    padding: SPACING.lg,
+    marginBottom: 0,
     backgroundColor: COLORS.ui.card,
     borderRadius: BORDER_RADIUS.lg,
     ...SHADOWS.md,
+    overflow: "hidden",
   },
-  noFeedback: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    color: COLORS.text.light,
-    fontStyle: "italic",
+  statItem: { flex: 1, paddingVertical: SPACING.lg, alignItems: "center" },
+  statDivider: { width: 1, backgroundColor: COLORS.ui.divider },
+  statNumber: {
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
+    color: COLORS.primary,
   },
-  feedbackItem: {
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.ui.divider,
-  },
-  feedbackComment: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    color: COLORS.text.primary,
-  },
-  feedbackScores: {
+  statLabel: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: COLORS.text.secondary,
     marginTop: SPACING.xs,
   },
-  feedbackScore: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.text.secondary,
-  },
-  addressCard: {
-    margin: SPACING.lg,
-    marginTop: 0,
-    padding: SPACING.lg,
-    backgroundColor: COLORS.ui.card,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.md,
-  },
-  addressText: {
+  infoCard: { marginTop: SPACING.lg, backgroundColor: "#EFF6FF" },
+  infoTitle: {
     fontSize: TYPOGRAPHY.fontSize.md,
-    color: COLORS.text.primary,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    color: "#1D4ED8",
+    marginBottom: SPACING.xs,
   },
+  infoText: { fontSize: TYPOGRAPHY.fontSize.sm, color: "#1E40AF", lineHeight: 20 },
   footer: {
     padding: SPACING.lg,
     backgroundColor: COLORS.ui.card,
     borderTopWidth: 1,
     borderTopColor: COLORS.ui.divider,
   },
-  navigateButton: {
+  navButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
     alignItems: "center",
   },
-  navigateButtonText: {
+  navButtonText: {
     color: COLORS.text.inverse,
     fontSize: TYPOGRAPHY.fontSize.md,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,

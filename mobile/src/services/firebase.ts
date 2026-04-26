@@ -57,39 +57,48 @@ let db: Firestore | null = null;
 let auth: Auth | null = null;
 
 /**
- * Initialize Firebase services
- * Must be called before using any Firebase functionality
+ * Initialize Firebase services.
+ * Silently skips if placeholder credentials are detected so the app
+ * still runs on Expo Go without a configured Firebase project.
  */
 export const initializeFirebase = (): void => {
-  if (!app) {
+  if (app) return;
+
+  if (
+    FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY' ||
+    FIREBASE_CONFIG.appId === 'YOUR_APP_ID'
+  ) {
+    console.warn('[Firebase] Placeholder credentials — Firebase features disabled. Update constants/index.ts to enable.');
+    return;
+  }
+
+  try {
     app = initializeApp(FIREBASE_CONFIG);
     db = getFirestore(app);
     auth = getAuth(app);
-    
+
     if (FEATURES.development.logApiCalls) {
       console.log('[Firebase] Initialized successfully');
     }
+  } catch (e) {
+    console.error('[Firebase] Init failed:', e);
   }
 };
 
 /**
- * Get Firestore instance
+ * Get Firestore instance, or null if Firebase is not configured.
  */
-export const getDatabase = (): Firestore => {
-  if (!db) {
-    initializeFirebase();
-  }
-  return db!;
+export const getDatabase = (): Firestore | null => {
+  if (!db) initializeFirebase();
+  return db;
 };
 
 /**
- * Get Auth instance
+ * Get Auth instance, or null if Firebase is not configured.
  */
-export const getAuthInstance = (): Auth => {
-  if (!auth) {
-    initializeFirebase();
-  }
-  return auth!;
+export const getAuthInstance = (): Auth | null => {
+  if (!auth) initializeFirebase();
+  return auth;
 };
 
 // ============================================================================
@@ -108,19 +117,14 @@ export const subscribeToParkingLots = (
   freeOnly: boolean = false
 ): (() => void) => {
   const database = getDatabase();
+  if (!database) return () => {};
+
   let constraints: QueryConstraint[] = [limit(100)];
-  
-  if (freeOnly) {
-    constraints.push(where('isFree', '==', true));
-  }
-  
+  if (freeOnly) constraints.push(where('isFree', '==', true));
+
   const q = query(collection(database, FIREBASE_CONFIG.collections.parkingLots), ...constraints);
-  
   return onSnapshot(q, (snapshot) => {
-    const lots = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as ParkingLot[];
+    const lots = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ParkingLot[];
     callback(lots);
   });
 };
@@ -130,12 +134,10 @@ export const subscribeToParkingLots = (
  */
 export const getParkingLot = async (lotId: string): Promise<ParkingLot | null> => {
   const database = getDatabase();
+  if (!database) return null;
   const docRef = doc(database, FIREBASE_CONFIG.collections.parkingLots, lotId);
   const docSnap = await getDoc(docRef);
-  
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() } as ParkingLot;
-  }
+  if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() } as ParkingLot;
   return null;
 };
 
@@ -144,6 +146,7 @@ export const getParkingLot = async (lotId: string): Promise<ParkingLot | null> =
  */
 export const createParkingLot = async (lotData: Partial<ParkingLot>): Promise<ParkingLot> => {
   const database = getDatabase();
+  if (!database) throw new Error('Firebase not configured');
   const docRef = await addDoc(collection(database, FIREBASE_CONFIG.collections.parkingLots), {
     ...lotData,
     createdAt: Timestamp.now(),
@@ -156,16 +159,11 @@ export const createParkingLot = async (lotData: Partial<ParkingLot>): Promise<Pa
 /**
  * Update a parking lot
  */
-export const updateParkingLot = async (
-  lotId: string,
-  lotData: Partial<ParkingLot>
-): Promise<void> => {
+export const updateParkingLot = async (lotId: string, lotData: Partial<ParkingLot>): Promise<void> => {
   const database = getDatabase();
+  if (!database) return;
   const docRef = doc(database, FIREBASE_CONFIG.collections.parkingLots, lotId);
-  await updateDoc(docRef, {
-    ...lotData,
-    updatedAt: Timestamp.now(),
-  });
+  await updateDoc(docRef, { ...lotData, updatedAt: Timestamp.now() });
 };
 
 // ============================================================================
@@ -180,6 +178,7 @@ export const subscribeToLotReports = (
   callback: (reports: ParkingReport[]) => void
 ): (() => void) => {
   const database = getDatabase();
+  if (!database) return () => {};
   const q = query(
     collection(database, FIREBASE_CONFIG.collections.reports),
     where('lotId', '==', lotId),
@@ -208,6 +207,7 @@ export const submitReport = async (
   longitude: number
 ): Promise<ParkingReport> => {
   const database = getDatabase();
+  if (!database) throw new Error('Firebase not configured');
   const docRef = await addDoc(collection(database, FIREBASE_CONFIG.collections.reports), {
     lotId,
     userId,
@@ -237,6 +237,7 @@ export const submitReport = async (
  */
 export const getLotRatings = async (lotId: string): Promise<ParkingRating[]> => {
   const database = getDatabase();
+  if (!database) return [];
   const q = query(
     collection(database, FIREBASE_CONFIG.collections.ratings),
     where('lotId', '==', lotId),
@@ -264,6 +265,7 @@ export const submitRating = async (
   comment?: string
 ): Promise<ParkingRating> => {
   const database = getDatabase();
+  if (!database) throw new Error('Firebase not configured');
   const docRef = await addDoc(collection(database, FIREBASE_CONFIG.collections.ratings), {
     lotId,
     userId,
