@@ -4,12 +4,11 @@ import { PhoneFrame } from "@/components/PhoneFrame";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, LogOut, Ban, ArrowLeft, Shield, Sparkles, Maximize2, MessageSquarePlus, ChevronDown } from "lucide-react";
+import { CheckCircle2, LogOut, Ban, Shield, Maximize2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const MAX_NOTE = 100;
-
 
 type ReportType = "parked" | "leaving" | "full" | null;
 
@@ -59,21 +58,11 @@ const Report = () => {
   return (
     <PhoneFrame>
       <div className="relative h-full w-full flex flex-col bg-background">
-        <header className="px-5 pt-[calc(env(safe-area-inset-top)+1rem)] pb-2 flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="h-10 w-10 rounded-2xl bg-muted flex items-center justify-center text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
-              One-tap report
-            </p>
-            <h1 className="font-display font-bold text-xl text-foreground leading-tight">
-              What's happening here?
-            </h1>
-          </div>
+        <header className="px-5 pt-[calc(env(safe-area-inset-top)+1rem)] pb-2">
+          <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
+            One-tap report
+          </p>
+          <h1 className="font-display font-bold text-xl text-foreground">What's happening here?</h1>
         </header>
 
         <div className="flex-1 overflow-y-auto px-5 pb-40 pt-3 scrollbar-hide space-y-3">
@@ -84,10 +73,8 @@ const Report = () => {
                 key={o.id}
                 onClick={() => setSelected(o.id)}
                 className={cn(
-                  "w-full rounded-2xl p-4 flex items-center gap-4 border-2 transition-all ease-soft text-left",
-                  active
-                    ? "border-primary bg-primary/10 shadow-glow"
-                    : "border-border bg-card hover:border-primary/30"
+                  "w-full rounded-2xl p-4 flex items-center gap-4 border-2 transition-all text-left",
+                  active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/30"
                 )}
               >
                 <div
@@ -123,28 +110,27 @@ const Report = () => {
               className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/30 transition-colors"
             >
               <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-                <Sparkles className="h-4 w-4" />
+                ✨
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-foreground">Optional: rate the spot</div>
                 <p className="text-xs text-muted-foreground">Help others know what to expect.</p>
               </div>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform",
-                  ratingsOpen && "rotate-180"
-                )}
-              />
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", ratingsOpen && "rotate-180")} />
             </button>
             {ratingsOpen && (
               <div className="px-4 pb-4 pt-1 animate-fade-in">
                 {[
                   { key: "safe", label: "Safety", icon: Shield },
-                  { key: "clean", label: "Cleanliness", icon: Sparkles },
+                  { key: "clean", label: "Cleanliness", icon: "✨" },
                   { key: "space", label: "Space", icon: Maximize2 },
-                ].map(({ key, label, icon: Icon }) => (
+                ].map(({ key, label, icon }) => (
                   <div key={key} className="flex items-center gap-3 py-2">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    {typeof icon === "string" ? (
+                      <span className="text-muted-foreground">{icon}</span>
+                    ) : (
+                      <icon className="h-4 w-4 text-muted-foreground" />
+                    )}
                     <span className="text-sm text-foreground flex-1">{label}</span>
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((n) => (
@@ -153,9 +139,7 @@ const Report = () => {
                           onClick={() => setScores((s) => ({ ...s, [key]: n }))}
                           className={cn(
                             "h-7 w-7 rounded-lg text-xs font-semibold transition-colors",
-                            (scores as any)[key] >= n
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
+                            (scores as any)[key] >= n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                           )}
                         >
                           {n}
@@ -177,27 +161,15 @@ const Report = () => {
               className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/30 transition-colors"
             >
               <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-                <MessageSquarePlus className="h-4 w-4" />
+                💬
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  Leave a quick note
-                  {note.trim() && (
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">
-                      Added
-                    </span>
-                  )}
+                  Leave a quick note {note.trim() && <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">Added</span>}
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  {note.trim() || `Add context — up to ${MAX_NOTE} characters.`}
-                </p>
+                <p className="text-xs text-muted-foreground truncate">{note.trim() || `Add context — up to ${MAX_NOTE} characters.`}</p>
               </div>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform shrink-0",
-                  noteOpen && "rotate-180"
-                )}
-              />
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", noteOpen && "rotate-180")} />
             </button>
             {noteOpen && (
               <div className="px-4 pb-4 pt-1 animate-fade-in">
@@ -205,17 +177,12 @@ const Report = () => {
                   value={note}
                   onChange={(e) => setNote(e.target.value.slice(0, MAX_NOTE))}
                   placeholder="e.g. 3 spots open on level 2, well lit"
-                  className="min-h-[70px] resize-none bg-background/60 border-border/40 text-sm rounded-xl"
+                  className="min-h-[70px] resize-none bg-background border-border/40 text-sm rounded-xl"
                   maxLength={MAX_NOTE}
                   autoFocus
                 />
                 <div className="mt-2 flex justify-end">
-                  <span
-                    className={cn(
-                      "text-[11px] tabular-nums",
-                      remaining <= 10 ? "text-status-busy" : "text-muted-foreground"
-                    )}
-                  >
+                  <span className={cn("text-[11px] tabular-nums", remaining <= 10 ? "text-status-busy" : "text-muted-foreground")}>
                     {remaining} chars left
                   </span>
                 </div>
@@ -229,7 +196,10 @@ const Report = () => {
           <Button
             disabled={!selected}
             onClick={submit}
-            className="w-full h-14 rounded-2xl bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow text-base font-semibold disabled:opacity-40 disabled:shadow-none"
+            className={cn(
+              "w-full h-14 rounded-2xl text-base font-semibold",
+              selected ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-muted-foreground"
+            )}
           >
             Send report
           </Button>

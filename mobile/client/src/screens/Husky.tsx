@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
 import { PhoneFrame } from "@/components/PhoneFrame";
 import { BottomNav } from "@/components/BottomNav";
 import { ChatMessage, SEED_CHAT } from "@/services/mockData";
-import { Send, Sparkles, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SUGGESTIONS = [
@@ -30,12 +28,11 @@ const Husky = () => {
     setMessages((m) => [
       ...m,
       { id: `u-${Date.now()}`, role: "user", content: trimmed, time: now },
-      // Stub assistant reply — backend will replace this with the real LLM call
       {
         id: `a-${Date.now() + 1}`,
         role: "assistant",
         content:
-          "Got it — I'm pulling **live SDOT data** and recent SeaPark reports. Connect Firebase to stream the real answer here.",
+          "Got it — I'm pulling live SDOT data and recent SeaPark reports. Connect Firebase to stream the real answer here.",
         time: now,
       },
     ]);
@@ -46,56 +43,35 @@ const Husky = () => {
     <PhoneFrame>
       <div className="relative h-full w-full flex flex-col bg-background">
         {/* Header */}
-        <header className="px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-3 border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <Link
-              to="/"
-              className="h-10 w-10 rounded-2xl bg-muted flex items-center justify-center text-foreground"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div className="relative">
-              <div className="h-11 w-11 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                <Sparkles className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-status-open ring-2 ring-background" />
+        <header className="px-4 pb-3 border-b border-border/50">
+          <div className="flex items-center gap-3 pt-[calc(env(safe-area-inset-top)+1rem)]">
+            <div className="h-11 w-11 rounded-2xl bg-primary flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-display font-bold text-lg text-foreground leading-none">
-                Husky AI
-              </h1>
+              <h1 className="font-display text-lg font-bold text-foreground">Husky AI</h1>
               <p className="text-xs text-muted-foreground">Seattle parking concierge · Online</p>
             </div>
           </div>
         </header>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 scrollbar-hide">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-4 space-y-3 scrollbar-hide">
           {messages.map((m) => (
             <div
               key={m.id}
-              className={cn(
-                "flex animate-fade-in",
-                m.role === "user" ? "justify-end" : "justify-start"
-              )}
+              className={cn("flex animate-fade-in", m.role === "user" ? "justify-end" : "justify-start")}
             >
               <div
                 className={cn(
                   "max-w-[82%] rounded-3xl px-4 py-2.5 text-sm leading-relaxed",
                   m.role === "user"
-                    ? "bg-gradient-primary text-primary-foreground rounded-br-md"
+                    ? "bg-primary text-primary-foreground rounded-br-md"
                     : "bg-muted text-foreground rounded-bl-md"
                 )}
               >
-                <div className="prose prose-sm prose-invert max-w-none [&_p]:my-0 [&_strong]:text-inherit">
-                  <ReactMarkdown>{m.content}</ReactMarkdown>
-                </div>
-                <div
-                  className={cn(
-                    "text-[10px] mt-1 opacity-60",
-                    m.role === "user" ? "text-primary-foreground" : "text-muted-foreground"
-                  )}
-                >
+                <div>{m.content}</div>
+                <div className={cn("text-[10px] mt-1 opacity-60", m.role === "user" ? "text-primary-foreground" : "text-muted-foreground")}>
                   {m.time}
                 </div>
               </div>
@@ -103,7 +79,7 @@ const Husky = () => {
           ))}
         </div>
 
-        {/* Suggestion chips */}
+        {/* Suggestions */}
         {messages.length <= 1 && (
           <div className="px-4 pb-2">
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
@@ -111,7 +87,7 @@ const Husky = () => {
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="shrink-0 rounded-full border border-border bg-card/50 hover:bg-muted px-3.5 py-2 text-xs text-foreground"
+                  className="shrink-0 rounded-full border border-border bg-card hover:bg-muted px-4 py-2 text-xs text-foreground transition-colors"
                 >
                   {s}
                 </button>
@@ -121,26 +97,29 @@ const Husky = () => {
         )}
 
         {/* Composer */}
-        <div className="px-4 pb-28 pt-2 border-t border-border/50">
+        <div className="px-4 pb-28 pt-2 border-t border-border/50 bg-card">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               send(input);
             }}
-            className="glass rounded-2xl flex items-center gap-2 pl-4 pr-1.5 py-1.5"
+            className="flex items-center gap-2"
           >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask Husky anything…"
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none py-2"
+              className="flex-1 bg-muted/50 rounded-2xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none"
             />
             <button
               type="submit"
               disabled={!input.trim()}
-              className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center text-primary-foreground shadow-glow disabled:opacity-40 disabled:shadow-none"
+              className={cn(
+                "h-11 w-11 rounded-xl flex items-center justify-center transition-all",
+                input.trim() ? "bg-primary" : "bg-muted"
+              )}
             >
-              <Send className="h-4 w-4" />
+              <Send className={cn("h-4 w-4", input.trim() ? "text-primary-foreground" : "text-muted-foreground")} />
             </button>
           </form>
         </div>
